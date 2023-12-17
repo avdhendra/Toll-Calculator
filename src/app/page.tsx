@@ -1,112 +1,188 @@
-import Image from 'next/image'
+"use client"
+import Header from './component/Header'
+import { Form, Formik, FormikValues, FormikProps, FieldArray } from 'formik'
+import { initialValuesProps } from './defs/def'
+import Input from './component/Input'
+import Map from './component/Map'
+import Button from './component/Button'
+import DatePicker from "react-datepicker";
+
+import 'react-datepicker/dist/react-datepicker.css';
+import Swap from "./utils/swap.svg"
+import { SelectInput } from './component/Input'
+import { vehicles } from './defs/constant'
+import { useState } from 'react'
+import { LeafletMouseEvent } from 'leaflet'
+
 
 export default function Home() {
+ const [markers, setMarkers] = useState([
+    { id: 1, position: [51.505, -0.09] }, 
+    { id: 2, position: [51.51, -0.1] },   
+  ]);
+  
+  const handleMapClick = (event:LeafletMouseEvent, markerId: number) => {
+  console.log("h1")
+    // Add a new marker to the map
+    const newMarker = {
+      id: markers.length + 1,
+      position: [event.latlng.lat, event.latlng.lng],
+    };
+
+    setMarkers([...markers, newMarker]);
+  };
+
+  const handleSwapValue = (formikProps: FormikProps<FormikValues>) => {
+    const newStartDestination = formikProps.values.endDestination;
+    const newEndDestination = formikProps.values.startDestination;
+
+    formikProps.setValues({
+      ...formikProps.values,
+      startDestination: newStartDestination,
+      endDestination: newEndDestination,
+    });
+  }
+
+  const intialValues: initialValuesProps = {
+    startDestination: "",
+    endDestination: "",
+    stopage: [{ text: "" }],
+    vehicle: "",
+    model: "",
+    startDate: ""
+
+
+  }
+  const addValues = (formikProps: FormikProps<FormikValues>) => {
+
+    formikProps.setValues({
+      ...formikProps.values,
+      stopage: [...formikProps.values.stopage, { text: "" }],
+    });
+  }
+  const removeValues = (index: number, formikProps: FormikProps<FormikValues>) => {
+    const newFields = [...formikProps.values.stopage];
+    newFields.splice(index, 1);
+    formikProps.setValues({
+      ...formikProps.values,
+      stopage: newFields,
+    });
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main className="w-full min-h-screen flex gap-14 flex-col">
+      <div className='relative'>
+        <Header />
+
+      </div>
+      <div className='flex flex-row w-full p-5'>
+        <div className='flex w-3/4'>
+          <Formik
+            initialValues={intialValues}
+            onSubmit={(values: FormikValues) => {
+              console.log(values)
+            }}>
+            {(formikProps: FormikProps<FormikValues>) => (
+              <Form className='w-full'>
+                <div className='flex flex-col gap-4 '>
+                  <Input
+                    type="text"
+                    name="startDestination"
+                    label={'Start Destination'}
+                    placeholder={'Enter Start Destination'}
+                    id={'start-destination'}
+                    divId={'startdestination'}
+
+                  />
+                  <div className='item'>
+
+                    <Button url={Swap} name={'swap'} type={"button"} id={'swap'} onClick={() => handleSwapValue(formikProps)} />
+                  </div>
+                  <Input type="text" name="endDestination" label={'End Destination'} placeholder={'Enter End Destination'} id={'end-destination'} divId={'startdestination'} />
+
+                  <div className="flex flex-col gap-4">
+                    <div>
+
+                      {Array.isArray(formikProps.values.stopage) &&
+                        formikProps.values.stopage.map((stopage, index) => (
+                          <div key={index}>
+                            <Input
+                              name={`stopage[${index}].text`}
+                              label={`Stopage ${index + 1}`}
+                              placeholder={`Enter ${index + 1}st Stopage `}
+                              id={`stopage${index + 1}`}
+                              divId={`stopage${index + 1}`}
+                              type={'text'}
+                            />
+                            <Button type="button" onClick={() => removeValues(index, formikProps)} name={'remove'} id={'remove-field'} />
+                          </div>
+                        ))}
+                    </div>
+                    <div>
+
+                      {formikProps.values.startDestination && formikProps.values.endDestination ?
+                        <Button name={'Add destination'} type={"button"} id={'add-destination'} onClick={() => addValues(formikProps)} /> : <span></span>
+                      }
+                    </div>
+
+                  </div>
+                  <div className='flex flex-col gap-4'>
+                    <div>
+                      <SelectInput label={'Select Vehicle'} type={'select'} id={'vehicle'} name={'vehicle'} divId={'vechicle'} item={vehicles} />
+
+                    </div>
+                    <div>
+                      {vehicles.filter((vehicle) => vehicle.brand === formikProps.values.vehicle)
+                        .map((filteredVehicle, index) => (
+                          <SelectInput
+                            key={index}
+                            label={'Vehicle Model'}
+                            type={'select'}
+                            id={'model'}
+                            name={'model'}
+                            divId={'model'}
+                            item={filteredVehicle.models}
+                          />
+                        ))}
+
+                    </div>
+                  </div>
+                  <div className='flex flex-col '>
+                    <label> Departure Time</label>
+                    <DatePicker
+                      name="startDate"
+                      className='flex h-10  rounded-md border border-black/30 bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-black/30 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50'
+                      selected={formikProps.values.startDate}
+                      onChange={(date) => formikProps.setFieldValue("startDate", date)}
+                      showTimeSelect
+                      placeholderText='Enter Date and Time'
+                      dateFormat="MMMM d, yyyy h:mm aa"
+                    />
+                  </div>
+                  <div className='flex justify-center items-center'>
+                    <Button name={'Submit'} type={"submit"} id={'submit-button'} />
+
+                  </div>
+
+
+                </div>
+
+
+              </Form>
+
+            )
+            }
+
+
+
+
+
+          </Formik>
         </div>
-      </div>
+        <div className='flex w-full'>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+          <Map markers={ markers} handleMapClick={handleMapClick} />
+        </div>
       </div>
     </main>
   )
